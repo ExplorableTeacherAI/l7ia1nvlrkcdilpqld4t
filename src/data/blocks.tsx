@@ -1,7 +1,7 @@
 import { type ReactElement } from "react";
 import { Block } from "@/components/templates";
 import { StackLayout } from "@/components/layouts";
-import { EditableH1, EditableParagraph, InlineScrubbleNumber, InlineTooltip, Cartesian2D } from "@/components/atoms";
+import { EditableH1, EditableParagraph, InlineScrubbleNumber, InlineTooltip } from "@/components/atoms";
 
 // Initialize variables and their colors from this file's variable definitions
 import { useVariableStore, initializeVariableColors, useVar } from "@/stores";
@@ -69,18 +69,38 @@ const ExponentialGrowthChart = () => {
         return `${(mm / 1000000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} km`;
     };
 
-    // Current position on log scale
-    const currentY = Math.log10(totalThickness);
+    // Chart dimensions
+    const width = 600;
+    const height = 300;
+    const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
 
-    // Create milestone point plots
-    const milestonePointPlots = milestones
-        .filter(m => m.folds <= 50)
-        .map(m => ({
-            type: 'point' as const,
-            x: m.folds,
-            y: Math.log10(paperThickness * Math.pow(2, m.folds)),
-            color: m.color,
-        }));
+    // Scale functions
+    const xMin = 0, xMax = 50;
+    const yMin = -1, yMax = 13;
+    const scaleX = (x: number) => margin.left + ((x - xMin) / (xMax - xMin)) * chartWidth;
+    const scaleY = (y: number) => margin.top + chartHeight - ((y - yMin) / (yMax - yMin)) * chartHeight;
+
+    // Generate curve path
+    const pathPoints: string[] = [];
+    for (let x = 0; x <= 50; x += 0.5) {
+        const y = Math.log10(paperThickness * Math.pow(2, x));
+        const px = scaleX(x);
+        const py = scaleY(y);
+        pathPoints.push(`${x === 0 ? 'M' : 'L'} ${px} ${py}`);
+    }
+    const curvePath = pathPoints.join(' ');
+
+    // Current position
+    const currentY = Math.log10(totalThickness);
+    const currentPx = scaleX(folds);
+    const currentPy = scaleY(currentY);
+
+    // X-axis ticks (every 10)
+    const xTicks = [0, 10, 20, 30, 40, 50];
+    // Y-axis ticks (every 2)
+    const yTicks = [0, 2, 4, 6, 8, 10, 12];
 
     return (
         <div className="w-full p-6 bg-white rounded-xl border border-border/40">
@@ -100,52 +120,113 @@ const ExponentialGrowthChart = () => {
                 </div>
             </div>
 
-            {/* Axis labels */}
-            <div className="text-center text-xs text-muted-foreground mb-1">
-                Thickness (log₁₀ scale)
-            </div>
+            {/* Custom SVG Chart */}
+            <div className="bg-white rounded-lg flex justify-center">
+                <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ maxWidth: '100%', height: 'auto' }}>
+                    {/* Grid lines */}
+                    {yTicks.map(y => (
+                        <line
+                            key={`grid-y-${y}`}
+                            x1={margin.left}
+                            y1={scaleY(y)}
+                            x2={width - margin.right}
+                            y2={scaleY(y)}
+                            stroke="#e5e7eb"
+                            strokeDasharray="3,3"
+                        />
+                    ))}
+                    {xTicks.map(x => (
+                        <line
+                            key={`grid-x-${x}`}
+                            x1={scaleX(x)}
+                            y1={margin.top}
+                            x2={scaleX(x)}
+                            y2={height - margin.bottom}
+                            stroke="#e5e7eb"
+                            strokeDasharray="3,3"
+                        />
+                    ))}
 
-            {/* Exponential growth chart */}
-            <div className="bg-white rounded-lg">
-                <Cartesian2D
-                    height={320}
-                    viewBox={{ x: [-2, 52], y: [-2, 14] }}
-                    showGrid={true}
-                    subdivisions={false}
-                    plots={[
-                        // The exponential curve (shown as log scale for visibility)
-                        {
-                            type: 'function',
-                            fn: (x: number) => Math.log10(paperThickness * Math.pow(2, x)),
-                            color: '#6366f1',
-                            weight: 3,
-                            domain: [0, 50],
-                        },
-                        // Vertical line at current fold count
-                        {
-                            type: 'segment',
-                            point1: [folds, -2] as [number, number],
-                            point2: [folds, currentY] as [number, number],
-                            color: '#f97316',
-                            weight: 2,
-                            style: 'dashed',
-                        },
-                        // Milestone markers as points
-                        ...milestonePointPlots,
-                        // Current position marker
-                        {
-                            type: 'point' as const,
-                            x: folds,
-                            y: currentY,
-                            color: '#f97316',
-                        },
-                    ]}
-                />
-            </div>
+                    {/* Axes */}
+                    <line x1={margin.left} y1={height - margin.bottom} x2={width - margin.right} y2={height - margin.bottom} stroke="#9ca3af" strokeWidth={1} />
+                    <line x1={margin.left} y1={margin.top} x2={margin.left} y2={height - margin.bottom} stroke="#9ca3af" strokeWidth={1} />
 
-            {/* X-axis label */}
-            <div className="text-center text-xs text-muted-foreground mt-1">
-                Number of folds
+                    {/* X-axis labels */}
+                    {xTicks.map(x => (
+                        <text
+                            key={`x-label-${x}`}
+                            x={scaleX(x)}
+                            y={height - margin.bottom + 20}
+                            textAnchor="middle"
+                            fill="#6b7280"
+                            fontSize={12}
+                        >
+                            {x}
+                        </text>
+                    ))}
+
+                    {/* Y-axis labels */}
+                    {yTicks.map(y => (
+                        <text
+                            key={`y-label-${y}`}
+                            x={margin.left - 10}
+                            y={scaleY(y) + 4}
+                            textAnchor="end"
+                            fill="#6b7280"
+                            fontSize={12}
+                        >
+                            {y}
+                        </text>
+                    ))}
+
+                    {/* Axis titles */}
+                    <text x={width / 2} y={height - 8} textAnchor="middle" fill="#6b7280" fontSize={12}>
+                        Number of folds
+                    </text>
+                    <text x={-height / 2 + 20} y={16} textAnchor="middle" fill="#6b7280" fontSize={12} transform="rotate(-90)">
+                        Thickness (log₁₀ mm)
+                    </text>
+
+                    {/* Exponential curve */}
+                    <path d={curvePath} fill="none" stroke="#6366f1" strokeWidth={3} strokeLinecap="round" />
+
+                    {/* Vertical line at current position */}
+                    <line
+                        x1={currentPx}
+                        y1={height - margin.bottom}
+                        x2={currentPx}
+                        y2={currentPy}
+                        stroke="#f97316"
+                        strokeWidth={2}
+                        strokeDasharray="6,4"
+                    />
+
+                    {/* Milestone markers */}
+                    {milestones.map((m, i) => {
+                        const my = Math.log10(paperThickness * Math.pow(2, m.folds));
+                        return (
+                            <circle
+                                key={i}
+                                cx={scaleX(m.folds)}
+                                cy={scaleY(my)}
+                                r={6}
+                                fill={m.color}
+                                stroke="white"
+                                strokeWidth={2}
+                            />
+                        );
+                    })}
+
+                    {/* Current position marker */}
+                    <circle
+                        cx={currentPx}
+                        cy={currentPy}
+                        r={8}
+                        fill="#f97316"
+                        stroke="white"
+                        strokeWidth={2}
+                    />
+                </svg>
             </div>
 
             {/* Milestone legend */}
