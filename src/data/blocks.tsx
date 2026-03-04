@@ -1,7 +1,7 @@
-import { type ReactElement } from "react";
+import { type ReactElement, useMemo } from "react";
 import { Block } from "@/components/templates";
 import { StackLayout } from "@/components/layouts";
-import { EditableH1, EditableParagraph, InlineScrubbleNumber, InlineTooltip } from "@/components/atoms";
+import { EditableH1, EditableParagraph, InlineScrubbleNumber, InlineTooltip, DataVisualization } from "@/components/atoms";
 
 // Initialize variables and their colors from this file's variable definitions
 import { useVariableStore, initializeVariableColors, useVar } from "@/stores";
@@ -40,6 +40,75 @@ const PaperThickness = () => {
         <span style={{ color: '#3cc499', fontWeight: 600 }}>
             {formatThickness(totalThickness)} — {getComparison(totalThickness)}
         </span>
+    );
+};
+
+// Helper component: Reactive bar chart showing thickness growth with each fold
+const PaperFoldingChart = () => {
+    const folds = useVar('folds', 10) as number;
+    const paperThickness = 0.1; // mm
+
+    // Generate data for each fold up to the current number
+    const chartData = useMemo(() => {
+        const data = [];
+        for (let i = 1; i <= Math.min(folds, 20); i++) {
+            const thickness = paperThickness * Math.pow(2, i);
+            // Convert to readable units for display
+            let displayValue: number;
+            let unit: string;
+            if (thickness < 1000) {
+                displayValue = Math.round(thickness * 10) / 10;
+                unit = 'mm';
+            } else if (thickness < 1000000) {
+                displayValue = Math.round(thickness / 100) / 10;
+                unit = 'm';
+            } else {
+                displayValue = Math.round(thickness / 100000) / 10;
+                unit = 'km';
+            }
+            data.push({
+                label: `${i}`,
+                value: Math.log10(thickness + 1), // Use log scale for visualization
+                displayValue: `${displayValue} ${unit}`,
+                rawValue: thickness,
+            });
+        }
+        return data;
+    }, [folds]);
+
+    // Color gradient from teal to indigo based on thickness
+    const getBarColor = (index: number) => {
+        const colors = ['#3cc499', '#34d399', '#2dd4bf', '#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#8b5cf6', '#a78bfa', '#6366f1'];
+        return colors[Math.min(index, colors.length - 1)];
+    };
+
+    const coloredData = chartData.map((d, i) => ({
+        ...d,
+        color: getBarColor(i),
+    }));
+
+    return (
+        <div className="w-full">
+            <DataVisualization
+                type="bar"
+                data={coloredData}
+                height={300}
+                xLabel="Number of folds"
+                yLabel="Thickness (log scale)"
+                showValues={false}
+                animate={false}
+                color="#6366f1"
+            />
+            <p className="text-center text-sm text-muted-foreground mt-2">
+                After <strong>{folds}</strong> folds: {(() => {
+                    const thickness = paperThickness * Math.pow(2, folds);
+                    if (thickness < 1000) return `${thickness.toFixed(1)} mm`;
+                    if (thickness < 1000000) return `${(thickness / 1000).toFixed(1)} m`;
+                    if (thickness < 1000000000) return `${(thickness / 1000000).toFixed(1)} km`;
+                    return `${(thickness / 1000000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} km`;
+                })()}
+            </p>
+        </div>
     );
 };
 
@@ -149,6 +218,12 @@ export const blocks: ReactElement[] = [
                 </InlineTooltip>
                 {" "}in action. Try dragging the number above to see how quickly things escalate. At just 42 folds, you'd reach the Moon!
             </EditableParagraph>
+        </Block>
+    </StackLayout>,
+
+    <StackLayout key="layout-paper-chart" maxWidth="xl">
+        <Block id="block-1772606539652" padding="md" hasVisualization>
+            <PaperFoldingChart />
         </Block>
     </StackLayout>,
 ];
