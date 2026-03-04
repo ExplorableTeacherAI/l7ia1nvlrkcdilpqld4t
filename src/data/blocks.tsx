@@ -109,8 +109,9 @@ const ExponentialGrowthChart = () => {
             <div className="bg-white rounded-lg">
                 <Cartesian2D
                     height={320}
-                    viewBox={{ x: [0, 50], y: [-2, 14] }}
+                    viewBox={{ x: [-2, 52], y: [-2, 14] }}
                     showGrid={true}
+                    subdivisions={false}
                     plots={[
                         // The exponential curve (shown as log scale for visibility)
                         {
