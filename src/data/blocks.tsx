@@ -43,22 +43,23 @@ const PaperThickness = () => {
     );
 };
 
-// Helper component: Exponential growth chart showing paper thickness
-const ExponentialGrowthChart = () => {
+// Helper component: Stacked Paper Layers Animation
+const StackedPaperLayers = () => {
     const folds = useVar('folds', 10) as number;
     const paperThickness = 0.1; // mm
     const totalThickness = paperThickness * Math.pow(2, folds);
+    const layers = Math.pow(2, folds);
 
-    // Milestones with fold numbers where they're reached
+    // Milestones with their heights in mm
     const milestones = [
-        { folds: 4, label: 'Fingernail', icon: '💅', color: '#3cc499' },
-        { folds: 7, label: 'Phone', icon: '📱', color: '#22d3ee' },
-        { folds: 14, label: 'Tall person', icon: '🧍', color: '#60a5fa' },
-        { folds: 17, label: 'House', icon: '🏠', color: '#818cf8' },
-        { folds: 22, label: 'Skyscraper', icon: '🏙️', color: '#8b5cf6' },
-        { folds: 27, label: 'Airplane', icon: '✈️', color: '#a78bfa' },
-        { folds: 30, label: 'Space', icon: '🚀', color: '#f472b6' },
-        { folds: 42, label: 'Moon', icon: '🌙', color: '#fbbf24' },
+        { height: 1.6, label: 'Fingernail', icon: '💅', color: '#3cc499' },
+        { height: 12.8, label: 'Phone', icon: '📱', color: '#22d3ee' },
+        { height: 1800, label: 'Person', icon: '🧍', color: '#60a5fa' },
+        { height: 10000, label: 'House', icon: '🏠', color: '#818cf8' },
+        { height: 400000, label: 'Skyscraper', icon: '🏙️', color: '#8b5cf6' },
+        { height: 12000000, label: 'Airplane', icon: '✈️', color: '#a78bfa' },
+        { height: 100000000, label: 'Space', icon: '🚀', color: '#f472b6' },
+        { height: 384400000000, label: 'Moon', icon: '🌙', color: '#fbbf24' },
     ];
 
     // Format thickness for display
@@ -69,191 +70,174 @@ const ExponentialGrowthChart = () => {
         return `${(mm / 1000000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} km`;
     };
 
-    // Chart dimensions
-    const width = 600;
-    const height = 300;
-    const margin = { top: 20, right: 30, bottom: 50, left: 60 };
-    const chartWidth = width - margin.left - margin.right;
-    const chartHeight = height - margin.top - margin.bottom;
+    // Calculate visual height (logarithmic scale for visualization)
+    const maxVisualHeight = 280;
+    const minLogHeight = Math.log10(0.1);
+    const maxLogHeight = Math.log10(384400000000 * 1.5);
+    const currentLogHeight = Math.log10(Math.max(totalThickness, 0.1));
+    const visualHeight = ((currentLogHeight - minLogHeight) / (maxLogHeight - minLogHeight)) * maxVisualHeight;
 
-    // Scale functions
-    const xMin = 0, xMax = 50;
-    const yMin = -1, yMax = 13;
-    const scaleX = (x: number) => margin.left + ((x - xMin) / (xMax - xMin)) * chartWidth;
-    const scaleY = (y: number) => margin.top + chartHeight - ((y - yMin) / (yMax - yMin)) * chartHeight;
+    // Number of visible paper layers (max 16 for visual clarity)
+    const visibleLayers = Math.min(layers, 16);
+    const layerHeight = Math.max(visualHeight / visibleLayers, 2);
 
-    // Generate curve path
-    const pathPoints: string[] = [];
-    for (let x = 0; x <= 50; x += 0.5) {
-        const y = Math.log10(paperThickness * Math.pow(2, x));
-        const px = scaleX(x);
-        const py = scaleY(y);
-        pathPoints.push(`${x === 0 ? 'M' : 'L'} ${px} ${py}`);
-    }
-    const curvePath = pathPoints.join(' ');
+    // Generate colors for layers (alternating shades)
+    const getLayerColor = (index: number) => {
+        const colors = ['#f8fafc', '#e2e8f0', '#f1f5f9', '#e5e7eb'];
+        return colors[index % colors.length];
+    };
 
-    // Current position
-    const currentY = Math.log10(totalThickness);
-    const currentPx = scaleX(folds);
-    const currentPy = scaleY(currentY);
+    // Find current milestone
+    const getCurrentMilestone = () => {
+        for (let i = milestones.length - 1; i >= 0; i--) {
+            if (totalThickness >= milestones[i].height) {
+                return milestones[i];
+            }
+        }
+        return null;
+    };
 
-    // X-axis ticks (every 10)
-    const xTicks = [0, 10, 20, 30, 40, 50];
-    // Y-axis ticks (every 2)
-    const yTicks = [0, 2, 4, 6, 8, 10, 12];
+    const currentMilestone = getCurrentMilestone();
 
     return (
         <div className="w-full p-6 bg-white rounded-xl border border-border/40">
             {/* Header with current values */}
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-6">
                 <div>
-                    <div className="text-sm text-muted-foreground">Current thickness</div>
+                    <div className="text-sm text-muted-foreground">Total thickness</div>
                     <div className="text-2xl font-bold" style={{ color: '#6366f1' }}>
                         {formatThickness(totalThickness)}
                     </div>
                 </div>
                 <div className="text-right">
-                    <div className="text-sm text-muted-foreground">Layers of paper</div>
+                    <div className="text-sm text-muted-foreground">Paper layers</div>
                     <div className="text-2xl font-bold text-foreground">
-                        {Math.pow(2, folds).toLocaleString()}
+                        {layers.toLocaleString()}
                     </div>
                 </div>
             </div>
 
-            {/* Custom SVG Chart */}
-            <div className="bg-white rounded-lg flex justify-center">
-                <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ maxWidth: '100%', height: 'auto' }}>
-                    {/* Grid lines */}
-                    {yTicks.map(y => (
-                        <line
-                            key={`grid-y-${y}`}
-                            x1={margin.left}
-                            y1={scaleY(y)}
-                            x2={width - margin.right}
-                            y2={scaleY(y)}
-                            stroke="#e5e7eb"
-                            strokeDasharray="3,3"
-                        />
-                    ))}
-                    {xTicks.map(x => (
-                        <line
-                            key={`grid-x-${x}`}
-                            x1={scaleX(x)}
-                            y1={margin.top}
-                            x2={scaleX(x)}
-                            y2={height - margin.bottom}
-                            stroke="#e5e7eb"
-                            strokeDasharray="3,3"
-                        />
-                    ))}
+            {/* Main visualization area */}
+            <div className="flex gap-8 items-end justify-center mb-6">
+                {/* Paper stack */}
+                <div className="relative flex flex-col-reverse items-center" style={{ minHeight: '300px' }}>
+                    {/* Ground line */}
+                    <div className="absolute bottom-0 w-32 h-0.5 bg-muted-foreground/30" />
 
-                    {/* Axes */}
-                    <line x1={margin.left} y1={height - margin.bottom} x2={width - margin.right} y2={height - margin.bottom} stroke="#9ca3af" strokeWidth={1} />
-                    <line x1={margin.left} y1={margin.top} x2={margin.left} y2={height - margin.bottom} stroke="#9ca3af" strokeWidth={1} />
-
-                    {/* X-axis labels */}
-                    {xTicks.map(x => (
-                        <text
-                            key={`x-label-${x}`}
-                            x={scaleX(x)}
-                            y={height - margin.bottom + 20}
-                            textAnchor="middle"
-                            fill="#6b7280"
-                            fontSize={12}
-                        >
-                            {x}
-                        </text>
-                    ))}
-
-                    {/* Y-axis labels */}
-                    {yTicks.map(y => (
-                        <text
-                            key={`y-label-${y}`}
-                            x={margin.left - 10}
-                            y={scaleY(y) + 4}
-                            textAnchor="end"
-                            fill="#6b7280"
-                            fontSize={12}
-                        >
-                            {y}
-                        </text>
-                    ))}
-
-                    {/* Axis titles */}
-                    <text x={width / 2} y={height - 8} textAnchor="middle" fill="#6b7280" fontSize={12}>
-                        Number of folds
-                    </text>
-                    <text x={-height / 2 + 20} y={16} textAnchor="middle" fill="#6b7280" fontSize={12} transform="rotate(-90)">
-                        Thickness (log₁₀ mm)
-                    </text>
-
-                    {/* Exponential curve */}
-                    <path d={curvePath} fill="none" stroke="#6366f1" strokeWidth={3} strokeLinecap="round" />
-
-                    {/* Vertical line at current position */}
-                    <line
-                        x1={currentPx}
-                        y1={height - margin.bottom}
-                        x2={currentPx}
-                        y2={currentPy}
-                        stroke="#f97316"
-                        strokeWidth={2}
-                        strokeDasharray="6,4"
-                    />
-
-                    {/* Milestone markers */}
-                    {milestones.map((m, i) => {
-                        const my = Math.log10(paperThickness * Math.pow(2, m.folds));
-                        return (
-                            <circle
-                                key={i}
-                                cx={scaleX(m.folds)}
-                                cy={scaleY(my)}
-                                r={6}
-                                fill={m.color}
-                                stroke="white"
-                                strokeWidth={2}
-                            />
-                        );
-                    })}
-
-                    {/* Current position marker */}
-                    <circle
-                        cx={currentPx}
-                        cy={currentPy}
-                        r={8}
-                        fill="#f97316"
-                        stroke="white"
-                        strokeWidth={2}
-                    />
-                </svg>
-            </div>
-
-            {/* Milestone legend */}
-            <div className="border-t border-border/40 pt-4 mt-4">
-                <div className="text-xs text-muted-foreground mb-3 text-center">Milestones on the journey:</div>
-                <div className="flex flex-wrap justify-center gap-2">
-                    {milestones.map((milestone, i) => {
-                        const reached = folds >= milestone.folds;
-                        return (
+                    {/* Stacked paper layers */}
+                    <div
+                        className="relative flex flex-col-reverse transition-all duration-500 ease-out"
+                        style={{ height: `${Math.max(visualHeight, 10)}px` }}
+                    >
+                        {Array.from({ length: visibleLayers }).map((_, i) => (
                             <div
                                 key={i}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all duration-300 ${
-                                    reached
-                                        ? 'bg-primary/10 text-foreground scale-100 opacity-100'
-                                        : 'bg-muted/30 text-muted-foreground scale-95 opacity-50'
-                                }`}
+                                className="w-24 border border-slate-300 shadow-sm transition-all duration-300"
                                 style={{
-                                    borderLeft: reached ? `3px solid ${milestone.color}` : '3px solid transparent',
+                                    height: `${layerHeight}px`,
+                                    minHeight: '2px',
+                                    backgroundColor: getLayerColor(i),
+                                    transform: `translateX(${(i % 2) * 2 - 1}px)`,
                                 }}
-                            >
-                                <span>{milestone.icon}</span>
-                                <span className="font-medium">{milestone.label}</span>
-                                <span className="text-xs opacity-70">({milestone.folds})</span>
+                            />
+                        ))}
+                        {layers > 16 && (
+                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground whitespace-nowrap">
+                                +{(layers - 16).toLocaleString()} more layers
                             </div>
-                        );
-                    })}
+                        )}
+                    </div>
+
+                    {/* Label */}
+                    <div className="mt-3 text-sm font-medium text-muted-foreground">
+                        Paper Stack
+                    </div>
                 </div>
+
+                {/* Comparison objects */}
+                <div className="relative flex flex-col justify-end items-center" style={{ minHeight: '300px' }}>
+                    {/* Milestone comparison bars */}
+                    <div className="flex gap-3 items-end">
+                        {milestones.slice(0, 6).map((milestone, i) => {
+                            const milestoneLogHeight = Math.log10(milestone.height);
+                            const milestoneVisualHeight = ((milestoneLogHeight - minLogHeight) / (maxLogHeight - minLogHeight)) * maxVisualHeight;
+                            const isReached = totalThickness >= milestone.height;
+
+                            return (
+                                <div key={i} className="flex flex-col items-center">
+                                    <div
+                                        className="w-8 rounded-t transition-all duration-500"
+                                        style={{
+                                            height: `${Math.max(milestoneVisualHeight, 8)}px`,
+                                            backgroundColor: isReached ? milestone.color : '#e5e7eb',
+                                            opacity: isReached ? 1 : 0.4,
+                                        }}
+                                    />
+                                    <div
+                                        className="mt-2 text-lg transition-all duration-300"
+                                        style={{
+                                            opacity: isReached ? 1 : 0.3,
+                                            transform: isReached ? 'scale(1.1)' : 'scale(1)',
+                                        }}
+                                    >
+                                        {milestone.icon}
+                                    </div>
+                                    <div
+                                        className="text-xs text-center mt-1 transition-all duration-300"
+                                        style={{
+                                            color: isReached ? milestone.color : '#9ca3af',
+                                            fontWeight: isReached ? 600 : 400,
+                                        }}
+                                    >
+                                        {milestone.label}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* Current status message */}
+            <div className="text-center p-4 rounded-lg bg-muted/30 border border-border/40">
+                {currentMilestone ? (
+                    <div className="flex items-center justify-center gap-2">
+                        <span className="text-2xl">{currentMilestone.icon}</span>
+                        <span className="text-foreground">
+                            Your paper stack is now taller than a{' '}
+                            <span className="font-semibold" style={{ color: currentMilestone.color }}>
+                                {currentMilestone.label.toLowerCase()}
+                            </span>!
+                        </span>
+                    </div>
+                ) : (
+                    <div className="text-muted-foreground">
+                        Keep folding to reach the first milestone!
+                    </div>
+                )}
+            </div>
+
+            {/* Progress indicators */}
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {milestones.map((milestone, i) => {
+                    const isReached = totalThickness >= milestone.height;
+                    return (
+                        <div
+                            key={i}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all duration-300 ${
+                                isReached
+                                    ? 'bg-primary/10 text-foreground'
+                                    : 'bg-muted/20 text-muted-foreground opacity-50'
+                            }`}
+                            style={{
+                                borderLeft: isReached ? `3px solid ${milestone.color}` : '3px solid transparent',
+                            }}
+                        >
+                            <span>{milestone.icon}</span>
+                            <span className="font-medium">{milestone.label}</span>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -370,7 +354,7 @@ export const blocks: ReactElement[] = [
 
     <StackLayout key="layout-paper-chart" maxWidth="xl">
         <Block id="block-1772606539652" padding="md" hasVisualization>
-            <ExponentialGrowthChart />
+            <StackedPaperLayers />
         </Block>
     </StackLayout>,
 
