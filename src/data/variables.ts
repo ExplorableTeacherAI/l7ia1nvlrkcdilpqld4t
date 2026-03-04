@@ -78,8 +78,19 @@ export interface VariableDefinition {
  */
 export const variableDefinitions: Record<string, VariableDefinition> = {
     // ========================================
-    // ADD YOUR VARIABLES HERE
+    // Paper Folding Variables
     // ========================================
+
+    folds: {
+        defaultValue: 10,
+        type: 'number',
+        label: 'Number of Folds',
+        description: 'How many times the paper is folded',
+        min: 1,
+        max: 50,
+        step: 1,
+        color: '#6366f1',
+    },
 
     // Uncomment and modify these examples for your lesson:
 

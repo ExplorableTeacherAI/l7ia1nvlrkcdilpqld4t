@@ -1,12 +1,47 @@
 import { type ReactElement } from "react";
-// import { Block } from "@/components/templates";
-// import { StackLayout, SplitLayout, GridLayout, ScrollytellingLayout, ScrollStep, ScrollVisual } from "@/components/layouts";
+import { Block } from "@/components/templates";
+import { StackLayout } from "@/components/layouts";
+import { EditableH1, EditableParagraph, InlineScrubbleNumber, InlineTooltip } from "@/components/atoms";
 
 // Initialize variables and their colors from this file's variable definitions
-import { useVariableStore, initializeVariableColors } from "@/stores";
-import { getDefaultValues, variableDefinitions } from "./variables";
+import { useVariableStore, initializeVariableColors, useVar } from "@/stores";
+import { getDefaultValues, variableDefinitions, getVariableInfo, numberPropsFromDefinition } from "./variables";
 useVariableStore.getState().initialize(getDefaultValues());
 initializeVariableColors(variableDefinitions);
+
+// Helper component to compute and display the paper thickness
+const PaperThickness = () => {
+    const folds = useVar('folds', 10) as number;
+    const paperThickness = 0.1; // mm
+    const totalThickness = paperThickness * Math.pow(2, folds);
+
+    // Format the thickness nicely
+    const formatThickness = (mm: number) => {
+        if (mm < 1000) return `${mm.toFixed(1)} mm`;
+        if (mm < 1000000) return `${(mm / 1000).toFixed(1)} m`;
+        if (mm < 1000000000) return `${(mm / 1000000).toFixed(1)} km`;
+        return `${(mm / 1000000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} km`;
+    };
+
+    const getComparison = (mm: number) => {
+        if (mm < 10) return "thinner than your fingernail";
+        if (mm < 100) return "about the thickness of a phone";
+        if (mm < 1000) return "about the height of a water bottle";
+        if (mm < 10000) return "taller than a house";
+        if (mm < 100000) return "higher than a skyscraper";
+        if (mm < 1000000) return "reaching into the clouds";
+        if (mm < 10000000) return "past airplanes fly";
+        if (mm < 100000000) return "into outer space";
+        if (mm < 384400000000) return "heading toward the Moon";
+        return "past the Moon! 🌙";
+    };
+
+    return (
+        <span style={{ color: '#3cc499', fontWeight: 600 }}>
+            {formatThickness(totalThickness)} — {getComparison(totalThickness)}
+        </span>
+    );
+};
 
 /**
  * ------------------------------------------------------------------
@@ -85,5 +120,35 @@ initializeVariableColors(variableDefinitions);
  */
 
 export const blocks: ReactElement[] = [
-    // Start adding your blocks here!
+    <StackLayout key="layout-paper-title" maxWidth="xl">
+        <Block id="block-paper-title" padding="lg">
+            <EditableH1 id="h1-paper-title" blockId="block-paper-title">
+                The Paper Folding Paradox 📄
+            </EditableH1>
+        </Block>
+    </StackLayout>,
+
+    <StackLayout key="layout-paper-intro" maxWidth="xl">
+        <Block id="block-paper-intro" padding="sm">
+            <EditableParagraph id="para-paper-intro" blockId="block-paper-intro">
+                Here's a mind-bending fact: if you could fold a piece of paper in half{" "}
+                <InlineScrubbleNumber
+                    id="scrubble-folds"
+                    varName="folds"
+                    {...numberPropsFromDefinition(getVariableInfo('folds'))}
+                />
+                {" "}times, the stack would be{" "}
+                <PaperThickness />
+                . Each fold doubles the thickness — that's{" "}
+                <InlineTooltip
+                    id="tooltip-exponential"
+                    tooltip="When something doubles repeatedly, it grows shockingly fast. This is called exponential growth."
+                    color="#8b5cf6"
+                >
+                    exponential growth
+                </InlineTooltip>
+                {" "}in action. Try dragging the number above to see how quickly things escalate. At just 42 folds, you'd reach the Moon!
+            </EditableParagraph>
+        </Block>
+    </StackLayout>,
 ];
