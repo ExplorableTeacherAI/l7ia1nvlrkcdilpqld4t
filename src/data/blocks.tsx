@@ -1,7 +1,7 @@
-import { type ReactElement, useMemo } from "react";
+import { type ReactElement } from "react";
 import { Block } from "@/components/templates";
 import { StackLayout } from "@/components/layouts";
-import { EditableH1, EditableParagraph, InlineScrubbleNumber, InlineTooltip, DataVisualization } from "@/components/atoms";
+import { EditableH1, EditableParagraph, InlineScrubbleNumber, InlineTooltip } from "@/components/atoms";
 
 // Initialize variables and their colors from this file's variable definitions
 import { useVariableStore, initializeVariableColors, useVar } from "@/stores";
@@ -43,71 +43,119 @@ const PaperThickness = () => {
     );
 };
 
-// Helper component: Reactive bar chart showing thickness growth with each fold
-const PaperFoldingChart = () => {
+// Helper component: Animated stacking layers showing paper thickness growth
+const PaperStackingLayers = () => {
     const folds = useVar('folds', 10) as number;
     const paperThickness = 0.1; // mm
+    const totalThickness = paperThickness * Math.pow(2, folds);
 
-    // Generate data for each fold up to the current number
-    const chartData = useMemo(() => {
-        const data = [];
-        for (let i = 1; i <= Math.min(folds, 20); i++) {
-            const thickness = paperThickness * Math.pow(2, i);
-            // Convert to readable units for display
-            let displayValue: number;
-            let unit: string;
-            if (thickness < 1000) {
-                displayValue = Math.round(thickness * 10) / 10;
-                unit = 'mm';
-            } else if (thickness < 1000000) {
-                displayValue = Math.round(thickness / 100) / 10;
-                unit = 'm';
-            } else {
-                displayValue = Math.round(thickness / 100000) / 10;
-                unit = 'km';
-            }
-            data.push({
-                label: `${i}`,
-                value: Math.log10(thickness + 1), // Use log scale for visualization
-                displayValue: `${displayValue} ${unit}`,
-                rawValue: thickness,
-            });
-        }
-        return data;
-    }, [folds]);
+    // Milestones in mm
+    const milestones = [
+        { threshold: 2, label: 'Fingernail', icon: '💅', color: '#3cc499' },
+        { threshold: 10, label: 'Phone', icon: '📱', color: '#22d3ee' },
+        { threshold: 1000, label: 'Tall person', icon: '🧍', color: '#60a5fa' },
+        { threshold: 10000, label: 'House', icon: '🏠', color: '#818cf8' },
+        { threshold: 300000, label: 'Skyscraper', icon: '🏙️', color: '#8b5cf6' },
+        { threshold: 10000000, label: 'Airplane cruising', icon: '✈️', color: '#a78bfa' },
+        { threshold: 100000000, label: 'Edge of space', icon: '🚀', color: '#f472b6' },
+        { threshold: 384400000000, label: 'The Moon!', icon: '🌙', color: '#fbbf24' },
+    ];
 
-    // Color gradient from teal to indigo based on thickness
-    const getBarColor = (index: number) => {
-        const colors = ['#3cc499', '#34d399', '#2dd4bf', '#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#8b5cf6', '#a78bfa', '#6366f1'];
-        return colors[Math.min(index, colors.length - 1)];
+    // Format thickness for display
+    const formatThickness = (mm: number) => {
+        if (mm < 1000) return `${mm.toFixed(1)} mm`;
+        if (mm < 1000000) return `${(mm / 1000).toFixed(1)} m`;
+        if (mm < 1000000000) return `${(mm / 1000000).toFixed(1)} km`;
+        return `${(mm / 1000000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} km`;
     };
 
-    const coloredData = chartData.map((d, i) => ({
-        ...d,
-        color: getBarColor(i),
-    }));
+    // Calculate number of visible layers (max 16 for visual clarity)
+    const visibleLayers = Math.min(folds, 16);
+    const layers = Math.pow(2, folds);
 
     return (
-        <div className="w-full">
-            <DataVisualization
-                type="bar"
-                data={coloredData}
-                height={300}
-                xLabel="Number of folds"
-                yLabel="Thickness (log scale)"
-                showValues={false}
-                animate={false}
-                color="#6366f1"
-            />
-            <p className="text-center text-sm text-muted-foreground mt-2">
-                After <strong>{folds}</strong> folds: {(() => {
-                    const thickness = paperThickness * Math.pow(2, folds);
-                    if (thickness < 1000) return `${thickness.toFixed(1)} mm`;
-                    if (thickness < 1000000) return `${(thickness / 1000).toFixed(1)} m`;
-                    if (thickness < 1000000000) return `${(thickness / 1000000).toFixed(1)} km`;
-                    return `${(thickness / 1000000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} km`;
-                })()}
-            </p>
+        <div className="w-full p-6 bg-card rounded-xl border border-border/40">
+            {/* Stacking visualization */}
+            <div className="relative h-64 flex items-end justify-center mb-6">
+                {/* Stack of paper layers */}
+                <div className="relative flex flex-col-reverse items-center">
+                    {Array.from({ length: visibleLayers }).map((_, i) => {
+                        const layerHeight = Math.max(2, Math.min(12, 180 / visibleLayers));
+                        const width = 120 - i * 2;
+                        const hue = 230 + (i / visibleLayers) * 60; // Blue to purple gradient
+                        return (
+                            <div
+                                key={i}
+                                className="transition-all duration-300 ease-out rounded-sm shadow-sm"
+                                style={{
+                                    width: `${Math.max(60, width)}px`,
+                                    height: `${layerHeight}px`,
+                                    backgroundColor: `hsl(${hue}, 70%, ${65 + i * 1.5}%)`,
+                                    marginTop: '-1px',
+                                    transform: `translateY(${-i * 0.5}px)`,
+                                    animation: `stackIn 0.3s ease-out ${i * 0.02}s both`,
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+
+                {/* Layer count indicator */}
+                <div className="absolute top-2 right-4 text-right">
+                    <div className="text-2xl font-bold text-foreground">
+                        {layers.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-muted-foreground">layers</div>
+                </div>
+
+                {/* Thickness indicator */}
+                <div className="absolute top-2 left-4 text-left">
+                    <div className="text-2xl font-bold text-foreground">
+                        {formatThickness(totalThickness)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">total thickness</div>
+                </div>
+            </div>
+
+            {/* Milestone markers */}
+            <div className="border-t border-border/40 pt-4">
+                <div className="text-xs text-muted-foreground mb-3 text-center">Milestones reached:</div>
+                <div className="flex flex-wrap justify-center gap-2">
+                    {milestones.map((milestone, i) => {
+                        const reached = totalThickness >= milestone.threshold;
+                        return (
+                            <div
+                                key={i}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all duration-300 ${
+                                    reached
+                                        ? 'bg-primary/10 text-foreground scale-100 opacity-100'
+                                        : 'bg-muted/30 text-muted-foreground scale-95 opacity-50'
+                                }`}
+                                style={{
+                                    borderLeft: reached ? `3px solid ${milestone.color}` : '3px solid transparent',
+                                }}
+                            >
+                                <span>{milestone.icon}</span>
+                                <span className="font-medium">{milestone.label}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* CSS Animation */}
+            <style>{`
+                @keyframes stackIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px) scale(0.9);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
+                }
+            `}</style>
         </div>
     );
 };
@@ -223,7 +271,7 @@ export const blocks: ReactElement[] = [
 
     <StackLayout key="layout-paper-chart" maxWidth="xl">
         <Block id="block-1772606539652" padding="md" hasVisualization>
-            <PaperFoldingChart />
+            <PaperStackingLayers />
         </Block>
     </StackLayout>,
 ];
