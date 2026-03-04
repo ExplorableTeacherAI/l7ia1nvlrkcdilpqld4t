@@ -373,4 +373,28 @@ export const blocks: ReactElement[] = [
             <ExponentialGrowthChart />
         </Block>
     </StackLayout>,
+
+    <StackLayout key="layout-math-history" maxWidth="xl">
+        <Block id="block-1772607663338" padding="sm">
+            <EditableParagraph id="para-math-history" blockId="block-1772607663338">
+                The concept of exponential growth has fascinated mathematicians for centuries. Ancient Indian mathematicians explored similar ideas in the legend of the{" "}
+                <InlineTooltip
+                    id="tooltip-wheat-chessboard"
+                    tooltip="A story where grains of wheat double on each square of a chessboard, resulting in more wheat than exists on Earth."
+                    color="#f97316"
+                >
+                    wheat and chessboard problem
+                </InlineTooltip>
+                {" "}around the 6th century. Later, mathematicians like{" "}
+                <InlineTooltip
+                    id="tooltip-euler"
+                    tooltip="Leonhard Euler (1707–1783) was a Swiss mathematician who made foundational contributions to exponential functions and the number e."
+                    color="#6366f1"
+                >
+                    Leonhard Euler
+                </InlineTooltip>
+                {" "}formalized exponential functions, giving us the tools to understand everything from population growth to compound interest — and yes, paper folding!
+            </EditableParagraph>
+        </Block>
+    </StackLayout>,
 ];
