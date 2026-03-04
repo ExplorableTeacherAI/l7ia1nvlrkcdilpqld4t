@@ -69,18 +69,18 @@ const ExponentialGrowthChart = () => {
         return `${(mm / 1000000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} km`;
     };
 
-    // Create points for milestone markers on the chart
-    const milestonePoints = milestones
+    // Current position on log scale
+    const currentY = Math.log10(totalThickness);
+
+    // Create milestone point plots
+    const milestonePointPlots = milestones
         .filter(m => m.folds <= 50)
         .map(m => ({
+            type: 'point' as const,
             x: m.folds,
             y: Math.log10(paperThickness * Math.pow(2, m.folds)),
-            label: m.icon,
             color: m.color,
         }));
-
-    // Current position point
-    const currentY = Math.log10(totalThickness);
 
     return (
         <div className="w-full p-6 bg-white rounded-xl border border-border/40">
@@ -100,14 +100,16 @@ const ExponentialGrowthChart = () => {
                 </div>
             </div>
 
+            {/* Axis labels */}
+            <div className="text-center text-xs text-muted-foreground mb-1">
+                Thickness (log₁₀ scale)
+            </div>
+
             {/* Exponential growth chart */}
             <div className="bg-white rounded-lg">
                 <Cartesian2D
                     height={320}
-                    xRange={[0, 50]}
-                    yRange={[-2, 14]}
-                    xLabel="Number of folds"
-                    yLabel="Thickness (log₁₀ mm)"
+                    viewBox={{ x: [0, 50], y: [-2, 14] }}
                     showGrid={true}
                     plots={[
                         // The exponential curve (shown as log scale for visibility)
@@ -115,38 +117,34 @@ const ExponentialGrowthChart = () => {
                             type: 'function',
                             fn: (x: number) => Math.log10(paperThickness * Math.pow(2, x)),
                             color: '#6366f1',
-                            strokeWidth: 3,
+                            weight: 3,
                             domain: [0, 50],
                         },
                         // Vertical line at current fold count
                         {
                             type: 'segment',
-                            from: [folds, -2],
-                            to: [folds, currentY],
+                            point1: [folds, -2] as [number, number],
+                            point2: [folds, currentY] as [number, number],
                             color: '#f97316',
-                            strokeWidth: 2,
-                            strokeStyle: 'dashed',
+                            weight: 2,
+                            style: 'dashed',
                         },
-                    ]}
-                    points={[
-                        // Milestone markers
-                        ...milestonePoints.map(p => ({
-                            x: p.x,
-                            y: p.y,
-                            color: p.color,
-                            size: 8,
-                            label: p.label,
-                        })),
+                        // Milestone markers as points
+                        ...milestonePointPlots,
                         // Current position marker
                         {
+                            type: 'point' as const,
                             x: folds,
                             y: currentY,
                             color: '#f97316',
-                            size: 12,
-                            label: '',
                         },
                     ]}
                 />
+            </div>
+
+            {/* X-axis label */}
+            <div className="text-center text-xs text-muted-foreground mt-1">
+                Number of folds
             </div>
 
             {/* Milestone legend */}
